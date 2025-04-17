@@ -25,6 +25,7 @@ public final class NimbleServiceID {
     private PublicKey signPublicKey;
     private PrivateKey signPrivateKey;
 
+    private Signature sg;
     private PublicKey pk;
 
     public NimbleServiceID(byte[] identity, byte[] publicKey, byte[] handle, byte[] signPublicKey, byte[] signPrivateKey) throws NoSuchAlgorithmException, InvalidParameterSpecException, InvalidKeySpecException {
@@ -32,8 +33,11 @@ public final class NimbleServiceID {
         this.publicKey = publicKey;
         this.handle = handle;
 
-        if (this.publicKey != null)
+        if (this.publicKey != null) {
             this.pk = parsePublicKey(publicKey);
+            sg = Signature.getInstance("SHA256withECDSA", new BouncyCastleProvider());
+            sg.initVerify(pk);
+        }
 
         // Assign signing keys. These keys are used for signing the tag stored in Nimble.
         KeyFactory kf = KeyFactory.getInstance("EC");
@@ -182,16 +186,6 @@ public final class NimbleServiceID {
     public boolean verifySignature(byte[] signature, byte[] msg) throws InvalidKeyException, SignatureException, NoSuchAlgorithmException, NoSuchProviderException, InvalidKeySpecException, NimbleError {
         // Available algorithms:
         // https://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html#KeyFactory
-        Signature sg = Signature.getInstance("SHA256withECDSA", new BouncyCastleProvider());
-
-        if (pk == null)
-            if (publicKey != null)
-                pk = parsePublicKey(publicKey);
-            else
-                throw new NimbleError("No public key is set");
-
-        // Verification
-        sg.initVerify(pk);
         sg.update(msg);
         return sg.verify(NimbleServiceID.toANS1Signature(signature));
     }
